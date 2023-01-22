@@ -74,6 +74,7 @@ def read_temp():
       if sensor_id == s_id:
 
         temp_string = lines[1][equals_pos+2:]
+        logging.info("convert the temp string {tempstring} to a number ", tempstring=temp_string)
         temp_c = float(temp_string) / 1000.0                 # convert to Celsi$
         temp_f = temp_c * 9.0 / 5.0 + 32.0                   # convert to Fahre$
         logging.info("the current temperature is {temp} C", temp=temp_c)
