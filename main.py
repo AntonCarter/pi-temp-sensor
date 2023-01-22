@@ -92,7 +92,8 @@ while True:
       logging.info("read temperature")
       if itr and centigrade is not None:
         logging.info("create point measurement")
-        p = Point("my_measurement").tag("location", "water tank").field("temperature", centigrade)        logging.info("writing to influx db")
+        p = Point("my_measurement").tag("location", "water tank").field("temperature", centigrade)        
+        logging.info("writing to influx db")
         write_api.write(bucket=bucket, org="rcl", record=p)                    $
         logging.info("writen to influx db")
       time.sleep(300)
