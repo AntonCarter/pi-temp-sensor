@@ -94,7 +94,7 @@ while True:
         logging.info("create point measurement")
         p = Point("my_measurement").tag("location", "water tank").field("temperature", centigrade)        
         logging.info("writing to influx db")
-        write_api.write(bucket=bucket, org="rcl", record=p)                    $
+        write_api.write(bucket=bucket, org="rcl", record=p)
         logging.info("writen to influx db")
       time.sleep(300)
       logging.info("setting first read to false")
