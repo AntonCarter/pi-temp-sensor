@@ -19,12 +19,8 @@ device_folder = glob.glob(base_dir + '28*')[0]             # find device with a$
 device_file = device_folder + '/w1_slave'                  # store the details
 bucket = "pi-temp"
 client = InfluxDBClient(url=db.url, token=db.token)
-
 write_api = client.write_api(write_options=SYNCHRONOUS)
-first_read = True
-itr = 0
-sensor_id = None
-invalid_sensor="ff"
+sample_interval = 300
 
 seqlog.log_to_seq(
 server_url=log.url,
@@ -43,11 +39,10 @@ def read_temp_raw():
    return lines
 
 def read_temp():
-   global sensor_id
-   logging.info("read temperature lines")
+   logging.debug("read temperature lines")
    lines = read_temp_raw()
    while len(lines)!=2:
-      logging.info("not 2 lines, re-read in 0.2 seconds", raw=lines)
+      logging.debug("not 2 lines, re-read in 0.2 seconds", raw=lines)
       time.sleep(0.2)
       lines = read_temp_raw()
 
@@ -59,51 +54,26 @@ def read_temp():
    logging.debug("{lines}",lines=lines)
    equals_pos = lines[1].find('t=')                        # find temperature i$
    if equals_pos != -1:
-      logging.info("found temperature")
-      s_id = lines[1][0:26]
-      crc_pos = lines[1].find('crc')
-      crc_value = lines[1][crc_pos + 4: crc_pos + 6]
+      logging.debug("found temperature")
+      temp_string = lines[1][equals_pos+2:]
+      logging.debug("convert the temp string {tempstring} to a number ", tempstring=temp_string)
+      temp_c = float(temp_string) / 1000.0                 # convert to Celsi$
+      temp_f = temp_c * 9.0 / 5.0 + 32.0                   # convert to Fahre$
+      logging.info("the current temperature is {temp} C", temp=temp_c)
+      return temp_c, temp_f
 
-      if crc_value == invalid_sensor:
-        return None, None
-
-      if sensor_id is None:
-        logging.info("set sensor id to {sensor}", sensor = s_id)
-        sensor_id = s_id
-
-      if sensor_id == s_id:
-
-        temp_string = lines[1][equals_pos+2:]
-        logging.info("convert the temp string {tempstring} to a number ", tempstring=temp_string)
-        temp_c = float(temp_string) / 1000.0                 # convert to Celsi$
-        temp_f = temp_c * 9.0 / 5.0 + 32.0                   # convert to Fahre$
-        logging.info("the current temperature is {temp} C", temp=temp_c)
-        return temp_c, temp_f
-
-      else:
-        logging.info("resetting sensor id {sensor} to None", sensor=sensor_id)
-        sensor_id = None
-   
    return None, None
 
 while True:
    logging.debug("start loop {iteration}", iteration=itr)
    try:
       centigrade, farenheit = read_temp()
-      logging.info("read temperature")
-      if itr and centigrade is not None:
-        logging.info("create point measurement")
+
+      if centigrade is not None:
         p = Point("my_measurement").tag("location", "water tank").field("temperature", centigrade)        
-        logging.info("writing to influx db")
         write_api.write(bucket=bucket, org="rcl", record=p)
         logging.info("writen to influx db")
-      time.sleep(300)
-      logging.info("setting first read to false")
-      first_read = False
-   except Exception as e:
-      logging.error('Error at %s', 'division', exc_info=e)
-      logging.warning("resetting iteration to zero")
-      itr = 0
+      time.sleep(sample_interval)
 
-   logging.debug("complete loop {iteration}", iteration=itr)
-   itr= itr + 1
+   except Exception as e:
+      logging.error('error writing to database', exc_info=e)
