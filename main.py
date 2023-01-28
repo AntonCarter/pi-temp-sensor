@@ -65,7 +65,6 @@ def read_temp():
    return None, None
 
 while True:
-   logging.debug("start loop {iteration}", iteration=itr)
    try:
       centigrade, farenheit = read_temp()
 
